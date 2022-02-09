@@ -1,0 +1,99 @@
+# In Cloud Shell, configure your project ID and set your GitHub user name and email address
+PROJECT_ID=test-jenkins-tf-deploy
+GITHUB_USER=DanielUlisses
+GITHUB_EMAIL=danielulisses@outlook.com
+gcloud config set project $PROJECT_ID
+
+git config --global user.email "$GITHUB_EMAIL"
+git config --global user.name "$GITHUB_USER"
+
+# clone repository
+cd ~
+git clone https://github.com/$GITHUB_USER/solutions-terraform-jenkins-gitops.git
+cd ~/solutions-terraform-jenkins-gitops
+
+########################################################################################################################
+#                                THE CODE IN THIS REPOSITORY IS STRUCTURED AS FOLLOWS:                                 #
+#           EXAMPLE-PIPELINES/ FOLDER: CONTAINS SUBFOLDERS WITH THE EXAMPLE PIPELINE USED IN THIS TUTORIAL.            #
+#             EXAMPLE-CREATE/: CONTAINS TERRAFORM CODE FOR CREATING A VIRTUAL MACHINE IN YOUR ENVIRONMENT.             #
+# ENVIRONMENTS/: CONTAINS DEV AND PROD ENVIRONMENT FOLDERS WITH BACKEND CONFIGURATIONS AND LINKS TO FILES FROM THE EXAMPLE-CREATE/ FOLDER. #
+#                JENKINS-GKE/ FOLDER: CONTAINS SCRIPTS REQUIRED TO DEPLOY JENKINS IN A NEW GKE CLUSTER.                #
+#    TF-GKE/: CONTAINS THE TERRAFORM CODE FOR DEPLOYING TO GKE, AND INSTALLING JENKINS AND ITS DEPENDENT RESOURCES.    #
+########################################################################################################################
+
+#In this section, you configure a Cloud Storage bucket that stores Terraform's remote state.
+gsutil mb gs://${PROJECT_ID}-tfstate
+gsutil versioning set on gs://${PROJECT_ID}-tfstate
+
+
+#Replace the PROJECT_ID placeholder with your project ID in both terraform.tfvars and backend.tf files:
+#That makes possible to use the same files for multiple projects
+sed -i.bak "s/PROJECT_ID/${PROJECT_ID}/g" ./example-pipelines/environments/*/terraform.tfvars
+sed -i.bak "s/PROJECT_ID/${PROJECT_ID}/g" ./example-pipelines/environments/*/backend.tf
+
+sed -i.bak "s/PROJECT_ID/${PROJECT_ID}/g" ./jenkins-gke/tf-gke/terraform.tfvars
+sed -i.bak "s/PROJECT_ID/${PROJECT_ID}/g" ./jenkins-gke/tf-gke/backend.tf
+
+# commit everything
+git add --all
+git commit -m "Update project IDs and buckets"
+git push origin dev
+
+#add github token
+GITHUB_TOKEN="TOKEN"
+
+#enable computer api
+gcloud services enable compute.googleapis.com
+
+# jenkins install to be used as ci cd
+cd jenkins-gke/tf-gke/
+terraform init
+terraform plan --var "github_username=$GITHUB_USER" --var "github_token=$GITHUB_TOKEN"
+terraform apply --auto-approve --var "github_username=$GITHUB_USER" --var "github_token=$GITHUB_TOKEN"
+
+###################################################################################################
+#                                        RESPONSE EXAMPLE                                         #
+#                                  CA_CERTIFICATE = <SENSITIVE>                                   #
+#                                    CLUSTER_NAME = "JENKINS"                                     #
+# GCP_SERVICE_ACCOUNT_EMAIL = "JENKINS-WI-JENKINS@TEST-JENKINS-TF-DEPLOY.IAM.GSERVICEACCOUNT.COM" #
+#                        JENKINS_K8S_CONFIG_SECRETS = "JENKINS-K8S-CONFIG"                        #
+#                          JENKINS_PROJECT_ID = "TEST-JENKINS-TF-DEPLOY"                          #
+#                         K8S_SERVICE_ACCOUNT_NAME = "JENKINS-WI-JENKINS"                         #
+#                                KUBERNETES_ENDPOINT = <SENSITIVE>                                #
+#     SERVICE_ACCOUNT = "TF-GKE-JENKINS-Q675@TEST-JENKINS-TF-DEPLOY.IAM.GSERVICEACCOUNT.COM"      #
+#                                       ZONE = "US-EAST4-A"                                       #
+###################################################################################################
+
+# retrieve credentials for gke
+gcloud container clusters get-credentials jenkins --zone=us-east4-a --project=${PROJECT_ID}
+
+# retrieve jekins credentials
+JENKINS_IP=$(kubectl get service jenkins -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+JENKINS_PASSWORD=$(kubectl get secret jenkins -o jsonpath="{.data.jenkins-admin-password}" | base64 --decode);echo
+printf "Jenkins url: http://$JENKINS_IP\nJenkins user: admin\nJenkins password: $JENKINS_PASSWORD\n"
+
+####################################
+#         RESPONSE EXAMPLE         #
+# JENKINS URL: HTTP://34.150.186.8 #
+#       JENKINS USER: ADMIN        #
+#   JENKINS PASSWORD: buwxc9ct6c   #
+####################################
+
+########################################################################################################################
+#                        LOG IN TO JENKINS USING THE OUTPUT INFORMATION FROM THE PREVIOUS STEP.                        #
+# NOTE: JENKINS TRIES TO DEPLOY YOUR INFRASTRUCTURE IN THE DEV AND PROD ENVIRONMENTS. THE PROD BRANCH WILL FAIL BECAUSE YOU PREPARED ONLY THE DEV BRANCH. LATER IN THIS TUTORIAL, YOU PROMOTE THOSE CHANGES TO PROD. #
+# CONFIGURE THE JENKINS LOCATION SO THAT GITHUB CAN CREATE LINKS THAT GO DIRECTLY TO YOUR BUILDS. CLICK MANAGE JENKINS > CONFIGURE SYSTEM, AND IN THE JENKINS URL FIELD, SET YOUR JENKINS URL. #
+########################################################################################################################
+
+#workflow on feature branch and then merge into dev
+git checkout -b change-vm-name
+
+#simulated changes
+cd example-pipelines/example-create
+sed -i.bak "s/\${var.environment}-001/\${var.environment}-new/g" main.tf
+
+# push new branch
+git commit -am "change vm name"
+git push --set-upstream origin change-vm-name
+
+#make now a pull requqest n github
