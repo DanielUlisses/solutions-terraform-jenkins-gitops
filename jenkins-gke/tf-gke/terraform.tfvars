@@ -1,7 +1,7 @@
 
 
-project_id = "test-jenkins-tf-deploy"
-tfstate_gcs_backend = "test-jenkins-tf-deploy-tfstate"
+project_id = "winged-app-340817"
+tfstate_gcs_backend = "winged-app-340817-tfstate"
 region = "us-east4"
 zones = ["us-east4-a"]
 ip_range_pods_name = "ip-range-pods"

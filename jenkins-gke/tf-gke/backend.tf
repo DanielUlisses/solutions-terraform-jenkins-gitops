@@ -16,7 +16,7 @@
 
 terraform {
   backend "gcs" {
-    bucket = "test-jenkins-tf-deploy-tfstate"
+    bucket = "winged-app-340817-tfstate"
     prefix = "jenkins"
   }
 }
