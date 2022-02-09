@@ -1,4 +1,4 @@
-project_id = "test-jenkins-tf-deploy"
+project_id = "winged-app-340817"
 environment = "prod"
 subnet1_region = "us-central1"
 subnet1_zone = "us-central1-a"

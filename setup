@@ -97,3 +97,6 @@ git commit -am "change vm name"
 git push --set-upstream origin change-vm-name
 
 #make now a pull requqest n github
+
+#More information could be obtained here
+#https://cloud.google.com/architecture/managing-infrastructure-as-code-with-terraform-jenkins-and-gitops
