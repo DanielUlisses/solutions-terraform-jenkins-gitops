@@ -1,7 +1,7 @@
 
 
-project_id = "winged-app-340817"
-tfstate_gcs_backend = "winged-app-340817-tfstate"
+project_id = "jenkins-340823"
+tfstate_gcs_backend = "jenkins-340823-tfstate"
 region = "us-east4"
 zones = ["us-east4-a"]
 ip_range_pods_name = "ip-range-pods"

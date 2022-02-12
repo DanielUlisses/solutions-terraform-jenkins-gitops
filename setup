@@ -1,5 +1,5 @@
 # In Cloud Shell, configure your project ID and set your GitHub user name and email address
-PROJECT_ID=test-jenkins-tf-deploy
+PROJECT_ID=jenkins-340823
 GITHUB_USER=DanielUlisses
 GITHUB_EMAIL=danielulisses@outlook.com
 gcloud config set project $PROJECT_ID
