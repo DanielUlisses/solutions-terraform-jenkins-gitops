@@ -89,7 +89,7 @@ module "jenkins-gke" {
   service_account          = "create"
   identity_namespace       = "${module.enables-google-apis.project_id}.svc.id.goog"
   node_metadata            = "GKE_METADATA_SERVER"
-  kubernetes_version       = "v1.22"
+  kubernetes_version       = "1.22"
   node_pools = [
     {
       machine_type       = "e2-medium"
